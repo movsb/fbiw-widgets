@@ -1,0 +1,42 @@
+<document>
+<title>fbiw-widgets Markdown demo</title>
+<style>
+document {
+	color: #edf2f8;
+	font-size: 20;
+}
+#page {
+	padding: 24;
+	background-color: #15181e;
+}
+#status {
+	color: #aeb9ca;
+	font-size: 17;
+}
+#viewport {
+	background-color: #202630;
+	border-width: 1;
+	border-color: #526074;
+	padding: 20;
+}
+#content {
+	font-size: 20;
+}
+#content code {
+	color: #9fddf9;
+	background-color: #313d4b;
+}
+#content th {
+	background-color: #344259;
+}
+</style>
+
+<block id="page">
+	<text font-size="34">Markdown → fbiw</text>
+	<text id="status">Arrow keys: scroll   L1/R1: font size (20)</text>
+	<scroll id="viewport" direction="vertical" height="430" step="48" smooth>
+		<block id="content"></block>
+	</scroll>
+	<text color="#aeb9ca" font-size="17">Parsed with goldmark GFM; rendered directly into fbiw boxes.</text>
+</block>
+</document>
