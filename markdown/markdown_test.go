@@ -13,10 +13,15 @@ func TestGFMTree(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(root.Children()) != 4 || root.Children()[2].GetTag() != `ul` || root.Children()[3].GetTag() != `table` {
+	if len(root.Children()) != 7 || root.Children()[4].GetTag() != `ul` || root.Children()[6].GetTag() != `table` {
 		t.Fatalf("unexpected block tree: %v", root.Children())
 	}
-	paragraph := root.Children()[1].Children()[0]
+	for _, index := range []int{1, 3, 5} {
+		if root.Children()[index].GetTag() != `spacer` {
+			t.Fatalf("missing top-level spacer at %d: %v", index, root.Children())
+		}
+	}
+	paragraph := root.Children()[2].Children()[0]
 	if paragraph.GetTag() != `text` || len(paragraph.Children()) != 2 || paragraph.Children()[0].GetTag() != `b` || paragraph.Children()[1].GetTag() != `code` {
 		t.Fatalf("unexpected inline tree: %v", paragraph.Children())
 	}
@@ -28,11 +33,35 @@ func TestRenderBoxTree(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if root.GetTag() != `block` || len(root.Children()) != 3 {
+	if root.GetTag() != `block` || len(root.Children()) != 5 {
 		t.Fatalf("root = %s, children = %d", root.GetTag(), len(root.Children()))
 	}
-	if root.Children()[1].GetTag() != `ul` || root.Children()[2].GetTag() != `table` {
-		t.Fatalf("children = %s, %s", root.Children()[1].GetTag(), root.Children()[2].GetTag())
+	if root.Children()[2].GetTag() != `ul` || root.Children()[4].GetTag() != `table` {
+		t.Fatalf("children = %s, %s", root.Children()[2].GetTag(), root.Children()[4].GetTag())
+	}
+	if len(root.Children()[2].Children()) != 2 {
+		t.Fatalf("list items = %v", root.Children()[2].Children())
+	}
+}
+
+func TestTopLevelSpacingFollowsFontSize(t *testing.T) {
+	root, err := Render(&fbiw.Document{}, []byte("first\n\nsecond"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(root.Children()) != 3 {
+		t.Fatalf("children = %v", root.Children())
+	}
+	spacer, ok := root.Children()[1].(*_EmSpacer)
+	if !ok {
+		t.Fatalf("spacing box = %T", root.Children()[1])
+	}
+	for _, size := range []int{16, 24} {
+		spacer.GetComputedStyles().FontSize = fbiw.NumberLength(size)
+		spacer.Calc(100, 100, fbiw.Constraints{})
+		if got := spacer.GetLayoutBox().Height; got != size {
+			t.Fatalf("font size %d: spacing = %d", size, got)
+		}
 	}
 }
 
@@ -59,13 +88,16 @@ func TestStandaloneImage(t *testing.T) {
 }
 
 func TestCodeBlockKeepsRows(t *testing.T) {
-	root, err := Render(&fbiw.Document{}, []byte("```go\n  one\n  two\n```\n"))
+	root, err := Render(&fbiw.Document{}, []byte("```go\n  one\n\n  two\n```\n"))
 	if err != nil {
 		t.Fatal(err)
 	}
 	code := root.Children()[0]
-	if len(code.Children()) != 2 || code.Children()[0].GetTag() != `text` || code.Children()[1].GetTag() != `text` {
-		t.Fatalf("code rows = %v", code.Children())
+	if len(code.Children()) != 1 || code.Children()[0].GetTag() != `text` {
+		t.Fatalf("code children = %v", code.Children())
+	}
+	if got := code.Children()[0].(*fbiw.Text).GetText(); got != "  one\n\n  two" {
+		t.Fatalf("code text = %q", got)
 	}
 }
 

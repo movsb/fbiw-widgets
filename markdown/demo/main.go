@@ -9,6 +9,7 @@ import (
 	"github.com/movsb/fbiw"
 	"github.com/movsb/fbiw-widgets/markdown"
 	"github.com/movsb/fbiw/input/sticks"
+	"golang.org/x/image/font/gofont/gomono"
 	"golang.org/x/image/font/gofont/goregular"
 )
 
@@ -16,7 +17,10 @@ import (
 var files embed.FS
 
 func main() {
-	app := fbiw.NewApp(fbiw.WithSystemFontData(goregular.TTF))
+	app := fbiw.NewApp(
+		fbiw.WithSystemFontData(goregular.TTF),
+		fbiw.WithFontData(`monospace`, false, false, gomono.TTF),
+	)
 	defer app.Close()
 
 	doc := app.NewDesktop(files, "main.html")

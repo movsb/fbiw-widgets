@@ -84,16 +84,34 @@ func appendText(parent fbiw.Box, value string) {
 	parent.(interface{ AppendChild(any) }).AppendChild(value)
 }
 
+type _EmSpacer struct{ fbiw.BaseBox }
+
+func newEmSpacer(doc *fbiw.Document) *_EmSpacer {
+	return &_EmSpacer{BaseBox: fbiw.NewBaseBox(doc, "spacer")}
+}
+
+func (b *_EmSpacer) Calc(_, _ int, _ fbiw.Constraints) {
+	b.SetLayoutBox(fbiw.Rect{Height: max(0, int(b.GetComputedStyles().FontSize.Number()))})
+}
+
 func (r *Renderer) appendBlocks(parent fbiw.Box, node ast.Node, source []byte) error {
+	appended := false
+	_, topLevel := node.(*ast.Document)
 	for child := node.FirstChild(); child != nil; child = child.NextSibling() {
 		box, err := r.block(child, source)
 		if err != nil {
 			return err
 		}
 		if box != nil {
+			if topLevel && appended {
+				if err := appendChild(parent, newEmSpacer(r.Document)); err != nil {
+					return err
+				}
+			}
 			if err := appendChild(parent, box); err != nil {
 				return err
 			}
+			appended = true
 		}
 	}
 	return nil
@@ -182,7 +200,7 @@ func (r *Renderer) block(node ast.Node, source []byte) (fbiw.Box, error) {
 		}
 		return row, nil
 	case *ast.Blockquote:
-		quote, err := r.make(fbiw.NewBlock(r.Document), "padding", "4 0 4 16", "border-width", "2", "border-color", "#777777")
+		quote, err := r.make(fbiw.NewBlock(r.Document), "padding", "4 0 4 16", "border-width", "0 0 0 2", "border-color", "#777777")
 		if err != nil {
 			return nil, err
 		}
@@ -192,16 +210,18 @@ func (r *Renderer) block(node ast.Node, source []byte) (fbiw.Box, error) {
 		if err != nil {
 			return nil, err
 		}
+		text, err := r.make(fbiw.NewText(r.Document), "font-family", "monospace")
+		if err != nil {
+			return nil, err
+		}
+		var content strings.Builder
 		for i := 0; i < node.Lines().Len(); i++ {
 			line := node.Lines().At(i)
-			text, err := r.make(fbiw.NewText(r.Document))
-			if err != nil {
-				return nil, err
-			}
-			appendText(text, strings.TrimSuffix(string(line.Value(source)), "\n"))
-			if err := appendChild(code, text); err != nil {
-				return nil, err
-			}
+			content.Write(line.Value(source))
+		}
+		appendText(text, strings.TrimSuffix(content.String(), "\n"))
+		if err := appendChild(code, text); err != nil {
+			return nil, err
 		}
 		return code, nil
 	case *ast.ThematicBreak:
